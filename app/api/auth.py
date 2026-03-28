@@ -127,7 +127,7 @@ async def signup(request: SignupRequest, response: Response):
         value=token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=config.JWT_EXPIRY_MINUTES * 60
     )
     
@@ -150,7 +150,7 @@ async def login(request: LoginRequest, response: Response):
         value=token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=config.JWT_EXPIRY_MINUTES * 60
     )
     
@@ -184,7 +184,7 @@ async def set_cookie(request: SetCookieRequest, response: Response):
             value=request.token,
             httponly=True,
             secure=True,
-            samesite="lax",
+            samesite="none",
             max_age=config.JWT_EXPIRY_MINUTES * 60
         )
         
@@ -292,7 +292,7 @@ async def google_login(response: Response):
         value=state,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=600
     )
     
