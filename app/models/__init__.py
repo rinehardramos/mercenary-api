@@ -35,6 +35,9 @@ class User:
     display_name: Optional[str] = None
     balance: float = 0.0
     is_active: bool = True
+    is_verified: bool = False
+    verification_token: Optional[str] = None
+    verification_expires: Optional[datetime] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

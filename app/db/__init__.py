@@ -4,21 +4,22 @@ Database repositories.
 
 from app.db.connection import get_db
 from app.models import User, Agent, Bounty, Transaction, AgentPerformance, BountyStatus, TransactionType
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
+import secrets
 
 
 class UserRepository:
-    def create(self, email: str, password_hash: str, display_name: str = None) -> User:
+    def create(self, email: str, password_hash: str, display_name: str = None, verification_token: str = None) -> User:
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO users (email, password_hash, display_name)
-                VALUES (%s, %s, %s)
-                RETURNING id, email, password_hash, display_name, balance, is_active, created_at, updated_at
+                INSERT INTO users (email, password_hash, display_name, verification_token, verification_expires)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING *
                 """,
-                (email, password_hash, display_name)
+                (email, password_hash, display_name, verification_token, datetime.utcnow() + timedelta(hours=24))
             )
             row = cur.fetchone()
             return User(**dict(row))
@@ -36,6 +37,31 @@ class UserRepository:
             cur.execute("SELECT * FROM users WHERE email = %s", (email,))
             row = cur.fetchone()
             return User(**dict(row)) if row else None
+    
+    def get_by_verification_token(self, token: str) -> Optional[User]:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT * FROM users WHERE verification_token = %s AND verification_expires > NOW()",
+                (token,)
+            )
+            row = cur.fetchone()
+            return User(**dict(row)) if row else None
+    
+    def verify_user(self, user_id: str) -> User:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE users 
+                SET is_verified = TRUE, verification_token = NULL, verification_expires = NULL, updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (user_id,)
+            )
+            row = cur.fetchone()
+            return User(**dict(row))
     
     def update_balance(self, user_id: str, amount: float) -> User:
         with get_db() as conn:

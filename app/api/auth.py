@@ -4,6 +4,7 @@ Authentication endpoints.
 
 from datetime import datetime, timedelta
 from typing import Optional
+import secrets
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -13,6 +14,7 @@ import bcrypt
 
 from app.config import config
 from app.db import UserRepository
+from app.services.email import email_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -34,6 +36,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+    requires_verification: bool = False
 
 
 class UserResponse(BaseModel):
@@ -41,7 +44,16 @@ class UserResponse(BaseModel):
     email: str
     display_name: Optional[str]
     balance: float
+    is_verified: bool
     created_at: datetime
+
+
+class VerifyRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
 
 
 def hash_password(password: str) -> str:
@@ -59,6 +71,10 @@ def create_token(user_id: str) -> str:
         "iat": datetime.utcnow()
     }
     return jwt.encode(payload, config.JWT_SECRET_KEY, algorithm="HS256")
+
+
+def create_verification_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
@@ -90,17 +106,23 @@ async def signup(request: SignupRequest):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     password_hash = hash_password(request.password)
+    verification_token = create_verification_token()
+    
     user = user_repo.create(
         email=request.email,
         password_hash=password_hash,
-        display_name=request.display_name
+        display_name=request.display_name,
+        verification_token=verification_token
     )
+    
+    email_service.send_verification_email(user.email, verification_token)
     
     token = create_token(user.id)
     
     return TokenResponse(
         access_token=token,
-        expires_in=config.JWT_EXPIRY_MINUTES * 60
+        expires_in=config.JWT_EXPIRY_MINUTES * 60,
+        requires_verification=True
     )
 
 
@@ -117,8 +139,49 @@ async def login(request: LoginRequest):
     
     return TokenResponse(
         access_token=token,
-        expires_in=config.JWT_EXPIRY_MINUTES * 60
+        expires_in=config.JWT_EXPIRY_MINUTES * 60,
+        requires_verification=not user.is_verified
     )
+
+
+@auth_router.post("/verify")
+async def verify_email(request: VerifyRequest):
+    user = user_repo.get_by_verification_token(request.token)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    
+    user_repo.verify_user(user.id)
+    
+    return {"message": "Email verified successfully"}
+
+
+@auth_router.post("/resend-verification")
+async def resend_verification(request: ResendVerificationRequest):
+    user = user_repo.get_by_email(request.email)
+    if not user:
+        return {"message": "If the email exists, a verification link has been sent"}
+    
+    if user.is_verified:
+        return {"message": "Email is already verified"}
+    
+    verification_token = create_verification_token()
+    
+    with user_repo._get_db() if hasattr(user_repo, '_get_db') else None:
+        from app.db.connection import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE users 
+                SET verification_token = %s, verification_expires = NOW() + INTERVAL '24 hours'
+                WHERE id = %s
+                """,
+                (verification_token, user.id)
+            )
+    
+    email_service.send_verification_email(user.email, verification_token)
+    
+    return {"message": "Verification email sent"}
 
 
 @auth_router.get("/me", response_model=UserResponse)
@@ -128,5 +191,6 @@ async def get_me(user = Depends(get_current_user)):
         email=user.email,
         display_name=user.display_name,
         balance=user.balance,
+        is_verified=user.is_verified,
         created_at=user.created_at
     )

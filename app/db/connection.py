@@ -45,6 +45,9 @@ def init_database():
                 display_name VARCHAR(100),
                 balance DECIMAL(10,2) DEFAULT 0.0,
                 is_active BOOLEAN DEFAULT TRUE,
+                is_verified BOOLEAN DEFAULT FALSE,
+                verification_token VARCHAR(255),
+                verification_expires TIMESTAMPTZ,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             )

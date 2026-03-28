@@ -16,10 +16,6 @@ class MercenaryConfig:
     
     DATABASE_URL: str = ""
     
-    TEMPORAL_HOST: str = "localhost:7233"
-    TEMPORAL_NAMESPACE: str = "mercenary"
-    TEMPORAL_TASK_QUEUE: str = "mercenary-bounties"
-    
     CORE_API_URL: str = "http://localhost:8000/api/internal"
     CORE_API_KEY: str = ""
     
@@ -28,6 +24,15 @@ class MercenaryConfig:
     
     JWT_SECRET_KEY: str = ""
     JWT_EXPIRY_MINUTES: int = 60
+    
+    # SMTP Configuration
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "Mercs.tech"
+    FRONTEND_URL: str = "https://mercs.tech"
     
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60
@@ -39,19 +44,23 @@ class MercenaryConfig:
     @classmethod
     def from_env(cls) -> "MercenaryConfig":
         return cls(
-            API_HOST=os.environ.get("MERCENARY_API_HOST", "0.0.0.0"),
-            API_PORT=int(os.environ.get("PORT", os.environ.get("MERCENARY_API_PORT", "8001"))),
-            SECRET_KEY=os.environ.get("MERCENARY_SECRET_KEY", "dev-secret-key"),
-            DATABASE_URL=os.environ.get("MERCENARY_DATABASE_URL", "postgresql://mercenary:mercenary@localhost:5433/mercenary_db"),
-            TEMPORAL_HOST=os.environ.get("TEMPORAL_HOST_URL", "localhost:7233"),
-            TEMPORAL_NAMESPACE=os.environ.get("MERCENARY_TEMPORAL_NAMESPACE", "mercenary"),
-            TEMPORAL_TASK_QUEUE=os.environ.get("MERCENARY_TASK_QUEUE", "mercenary-bounties"),
+            API_HOST=os.environ.get("API_HOST", "0.0.0.0"),
+            API_PORT=int(os.environ.get("PORT", os.environ.get("API_PORT", "8001"))),
+            SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key"),
+            DATABASE_URL=os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/mercenary"),
             CORE_API_URL=os.environ.get("CORE_API_URL", "http://localhost:8000/api/internal"),
-            CORE_API_KEY=os.environ.get("CORE_API_KEY", "dev-core-api-key"),
+            CORE_API_KEY=os.environ.get("CORE_API_KEY", ""),
             STRIPE_SECRET_KEY=os.environ.get("STRIPE_SECRET_KEY", ""),
             STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
-            JWT_SECRET_KEY=os.environ.get("MERCENARY_JWT_SECRET", "dev-jwt-secret"),
+            JWT_SECRET_KEY=os.environ.get("JWT_SECRET", "dev-jwt-secret"),
             JWT_EXPIRY_MINUTES=int(os.environ.get("JWT_EXPIRY_MINUTES", "60")),
+            SMTP_HOST=os.environ.get("SMTP_HOST", ""),
+            SMTP_PORT=int(os.environ.get("SMTP_PORT", "587")),
+            SMTP_USER=os.environ.get("SMTP_USER", ""),
+            SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
+            SMTP_FROM_EMAIL=os.environ.get("SMTP_FROM_EMAIL", "noreply@mercs.tech"),
+            SMTP_FROM_NAME=os.environ.get("SMTP_FROM_NAME", "Mercs.tech"),
+            FRONTEND_URL=os.environ.get("FRONTEND_URL", "https://mercs.tech"),
             RATE_LIMIT_REQUESTS=int(os.environ.get("RATE_LIMIT_REQUESTS", "100")),
             RATE_LIMIT_WINDOW=int(os.environ.get("RATE_LIMIT_WINDOW", "60")),
             PLATFORM_FEE_PERCENT=float(os.environ.get("PLATFORM_FEE_PERCENT", "15.0")),
