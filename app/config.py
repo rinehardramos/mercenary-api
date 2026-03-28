@@ -25,12 +25,9 @@ class MercenaryConfig:
     JWT_SECRET_KEY: str = ""
     JWT_EXPIRY_MINUTES: int = 60
     
-    # SMTP Configuration
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = ""
+    # Email (Resend)
+    RESEND_API_KEY: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@mercs.tech"
     SMTP_FROM_NAME: str = "Mercs.tech"
     FRONTEND_URL: str = "https://mercs.tech"
     
@@ -54,10 +51,7 @@ class MercenaryConfig:
             STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
             JWT_SECRET_KEY=os.environ.get("JWT_SECRET", "dev-jwt-secret"),
             JWT_EXPIRY_MINUTES=int(os.environ.get("JWT_EXPIRY_MINUTES", "60")),
-            SMTP_HOST=os.environ.get("SMTP_HOST", ""),
-            SMTP_PORT=int(os.environ.get("SMTP_PORT", "587")),
-            SMTP_USER=os.environ.get("SMTP_USER", ""),
-            SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
+            RESEND_API_KEY=os.environ.get("RESEND_API_KEY", ""),
             SMTP_FROM_EMAIL=os.environ.get("SMTP_FROM_EMAIL", "noreply@mercs.tech"),
             SMTP_FROM_NAME=os.environ.get("SMTP_FROM_NAME", "Mercs.tech"),
             FRONTEND_URL=os.environ.get("FRONTEND_URL", "https://mercs.tech"),
