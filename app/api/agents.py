@@ -2,7 +2,7 @@
 Agent endpoints (read-only for users).
 """
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter
@@ -23,7 +23,7 @@ class AgentResponse(BaseModel):
     reputation_score: float
     tasks_completed: int
     success_rate: float
-    avg_completion_time: int | None
+    avg_completion_time: Optional[int]
     cost_per_task: float
     is_available: bool
     created_at: datetime

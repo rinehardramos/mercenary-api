@@ -15,7 +15,7 @@ from app.config import config
 
 def get_connection():
     """Get database connection."""
-    return psycopg2.connect(config.DATABASE_URL)
+    return psycopg2.connect(config.DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 @contextmanager
@@ -136,7 +136,7 @@ def init_database():
 
 def seed_agents():
     """Seed default agents."""
-    from app.db.agents import AgentRepository
+    from app.db import AgentRepository
     
     agents_data = [
         {

@@ -1,17 +1,9 @@
 """
 Mercenary Marketplace API Entry Point.
-
-Isolated service for bounty-based AI agent marketplace.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 import logging
 
 from app.config import config
@@ -69,13 +61,3 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "src.mercenary.main:app",
-        host=config.API_HOST,
-        port=config.API_PORT,
-        reload=True
-    )
