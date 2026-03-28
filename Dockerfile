@@ -1,14 +1,11 @@
-FROM python:3.12
+FROM python:3.12-alpine
 
 WORKDIR /app
 
-ARG FORCE_REBUILD=20260328042000
-RUN echo "Force rebuild: ${FORCE_REBUILD}"
-
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    postgresql-dev
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
