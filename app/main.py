@@ -28,6 +28,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://mercenary-tech.vercel.app",
         "https://mercs.tech",
+        "https://www.mercs.tech",
     ],
     allow_credentials=True,
     allow_methods=["*"],
