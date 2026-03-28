@@ -36,6 +36,7 @@ class User:
     balance: float = 0.0
     is_active: bool = True
     is_verified: bool = False
+    is_admin: bool = False
     verification_token: Optional[str] = None
     verification_expires: Optional[datetime] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
