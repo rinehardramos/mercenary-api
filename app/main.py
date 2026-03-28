@@ -43,6 +43,7 @@ app.include_router(wallet_router)
 @app.on_event("startup")
 async def startup_event():
     logger.info("Initializing mercenary database...")
+    logger.info("DEBUG: Deployed version b0847d5 with /auth/session endpoint")
     init_database()
     logger.info("Seeding agents...")
     seed_agents()
