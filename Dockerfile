@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -7,14 +7,26 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ARG CACHE_BUST=default
-RUN echo "Build timestamp: $(date)" > /tmp/build_info
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ ./app/
+RUN mkdir -p /app/app/api
 
-RUN ls -la /app/app/api/ && head -20 /app/app/api/auth.py
+COPY app/api/auth.py /app/app/api/auth.py
+COPY app/main.py /app/app/main.py
+COPY app/config.py /app/app/config.py
+COPY app/db/ /app/app/db/
+COPY app/services/ /app/app/services/
+COPY app/models/ /app/app/models/
+
+RUN echo "=== Checking deployed files ===" && \
+    ls -la /app/app/api/ && \
+    echo "=== First 5 lines of auth.py ===" && \
+    head -5 /app/app/api/auth.py && \
+    echo "=== Line count of auth.py ===" && \
+    wc -l /app/app/api/auth.py && \
+    echo "=== Checking for /auth/session endpoint ===" && \
+    grep -n "auth/session" /app/app/api/auth.py
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
