@@ -1,5 +1,8 @@
 FROM python:3.12-alpine
 
+ARG BUILD_VERSION=2026-03-28-v3
+RUN echo "=== BUILD VERSION: ${BUILD_VERSION} ==="
+
 WORKDIR /app
 
 RUN apk add --no-cache \
