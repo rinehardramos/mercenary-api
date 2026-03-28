@@ -4,14 +4,15 @@ Mercenary database models.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 import uuid
 
 
 class BountyStatus(str, Enum):
     OPEN = "open"
-    CLAIMED = "claimed"
+    NEGOTIATING = "negotiating"
+    TAKEN = "taken"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -27,18 +28,97 @@ class TransactionType(str, Enum):
     WITHDRAWAL = "withdrawal"
 
 
+class NegotiationStatus(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    COUNTERED = "countered"
+
+
 @dataclass
 class User:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     email: str = ""
     password_hash: str = ""
     display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
     balance: float = 0.0
     is_active: bool = True
     is_verified: bool = False
     is_admin: bool = False
+    google_id: Optional[str] = None
     verification_token: Optional[str] = None
     verification_expires: Optional[datetime] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class Merc:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    api_key: str = ""
+    description: Optional[str] = None
+    avatar_url: Optional[str] = None
+    capabilities: List[str] = field(default_factory=list)
+    specializations: List[str] = field(default_factory=list)
+    rate_per_hour: float = 0.0
+    is_available: bool = True
+    reputation_score: float = 0.5
+    tasks_completed: int = 0
+    success_rate: float = 0.0
+    user_id: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class MercService:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    merc_id: str = ""
+    title: str = ""
+    description: str = ""
+    base_price: float = 0.0
+    category: str = "general"
+    estimated_hours: int = 1
+    is_active: bool = True
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class Bounty:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str = ""
+    title: str = ""
+    description: str = ""
+    reward: float = 0.0
+    duration_minutes: int = 60
+    difficulty: str = "medium"
+    specialization: str = "general"
+    status: BountyStatus = BountyStatus.OPEN
+    merc_id: Optional[str] = None
+    estimated_duration: Optional[int] = None
+    proposed_price: Optional[float] = None
+    claimed_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    result: Optional[str] = None
+    artifacts: Optional[dict] = None
+    user_rating: Optional[int] = None
+    user_feedback: Optional[str] = None
+    workflow_id: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class BountyNegotiation:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    bounty_id: str = ""
+    merc_id: str = ""
+    proposed_price: float = 0.0
+    estimated_duration: int = 60
+    message: Optional[str] = None
+    status: NegotiationStatus = NegotiationStatus.PENDING
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -58,29 +138,6 @@ class Agent:
     is_available: bool = True
     total_earnings: float = 0.0
     created_at: datetime = field(default_factory=datetime.utcnow)
-
-
-@dataclass
-class Bounty:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str = ""
-    title: str = ""
-    description: str = ""
-    price: float = 0.0
-    duration_minutes: int = 60
-    difficulty: str = "medium"
-    specialization: str = "general"
-    status: BountyStatus = BountyStatus.OPEN
-    claimed_by: Optional[str] = None
-    claimed_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    result: Optional[str] = None
-    artifacts: Optional[dict] = None
-    user_rating: Optional[int] = None
-    user_feedback: Optional[str] = None
-    workflow_id: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
 
 
 @dataclass

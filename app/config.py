@@ -31,6 +31,11 @@ class MercenaryConfig:
     SMTP_FROM_NAME: str = "Mercs.tech"
     FRONTEND_URL: str = "https://mercs.tech"
     
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60
     
@@ -55,6 +60,9 @@ class MercenaryConfig:
             SMTP_FROM_EMAIL=os.environ.get("SMTP_FROM_EMAIL", "noreply@mercs.tech"),
             SMTP_FROM_NAME=os.environ.get("SMTP_FROM_NAME", "Mercs.tech"),
             FRONTEND_URL=os.environ.get("FRONTEND_URL", "https://mercs.tech"),
+            GOOGLE_CLIENT_ID=os.environ.get("GOOGLE_CLIENT_ID", ""),
+            GOOGLE_CLIENT_SECRET=os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            GOOGLE_REDIRECT_URI=os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/google/callback"),
             RATE_LIMIT_REQUESTS=int(os.environ.get("RATE_LIMIT_REQUESTS", "100")),
             RATE_LIMIT_WINDOW=int(os.environ.get("RATE_LIMIT_WINDOW", "60")),
             PLATFORM_FEE_PERCENT=float(os.environ.get("PLATFORM_FEE_PERCENT", "15.0")),
