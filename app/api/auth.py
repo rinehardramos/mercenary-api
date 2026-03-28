@@ -102,8 +102,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-@auth_router.post("/signup", response_model=TokenResponse)
-async def signup(request: SignupRequest):
+@auth_router.post("/signup")
+async def signup(request: SignupRequest, response: Response):
     existing = user_repo.get_by_email(request.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -122,29 +122,45 @@ async def signup(request: SignupRequest):
     
     token = create_token(user.id)
     
-    return TokenResponse(
-        access_token=token,
-        expires_in=config.JWT_EXPIRY_MINUTES * 60,
-        requires_verification=True
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=config.JWT_EXPIRY_MINUTES * 60
     )
+    
+    return {"message": "Account created. Please check your email to verify.", "requires_verification": True}
 
 
-@auth_router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+@auth_router.post("/login")
+async def login(request: LoginRequest, response: Response):
     user = user_repo.get_by_email(request.email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    if not verify_password(request.password, user.password_hash):
+    if not user.password_hash or not verify_password(request.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     token = create_token(user.id)
     
-    return TokenResponse(
-        access_token=token,
-        expires_in=config.JWT_EXPIRY_MINUTES * 60,
-        requires_verification=not user.is_verified
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=config.JWT_EXPIRY_MINUTES * 60
     )
+    
+    return {"message": "Login successful", "is_verified": user.is_verified}
+
+
+@auth_router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("auth_token")
+    return {"message": "Logged out successfully"}
 
 
 @auth_router.post("/verify")
