@@ -2,6 +2,9 @@ FROM python:3.12
 
 WORKDIR /app
 
+ARG FORCE_REBUILD=20260328042000
+RUN echo "Force rebuild: ${FORCE_REBUILD}"
+
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
