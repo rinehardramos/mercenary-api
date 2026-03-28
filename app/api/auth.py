@@ -103,7 +103,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 
 @auth_router.post("/signup")
-async def signup(request: SignupRequest, response: Response):
+async def signup(request: SignupRequest):
     existing = user_repo.get_by_email(request.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -122,20 +122,24 @@ async def signup(request: SignupRequest, response: Response):
     
     token = create_token(user.id)
     
-    response.set_cookie(
-        key="auth_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=config.JWT_EXPIRY_MINUTES * 60
-    )
-    
-    return {"message": "Account created. Please check your email to verify.", "requires_verification": True}
+    return {
+        "token": token,
+        "message": "Account created. Please check your email to verify.",
+        "requires_verification": True,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "avatar_url": None,
+            "balance": user.balance,
+            "is_verified": user.is_verified,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    }
 
 
 @auth_router.post("/login")
-async def login(request: LoginRequest, response: Response):
+async def login(request: LoginRequest):
     user = user_repo.get_by_email(request.email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -145,54 +149,23 @@ async def login(request: LoginRequest, response: Response):
     
     token = create_token(user.id)
     
-    response.set_cookie(
-        key="auth_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=config.JWT_EXPIRY_MINUTES * 60
-    )
-    
-    return {"message": "Login successful", "is_verified": user.is_verified}
+    return {
+        "token": token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "avatar_url": getattr(user, 'avatar_url', None),
+            "balance": user.balance,
+            "is_verified": user.is_verified,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    }
 
 
 @auth_router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("auth_token")
+async def logout():
     return {"message": "Logged out successfully"}
-
-
-class SetCookieRequest(BaseModel):
-    token: str
-
-
-@auth_router.post("/set-cookie")
-async def set_cookie(request: SetCookieRequest, response: Response):
-    try:
-        payload = jwt.decode(request.token, config.JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=400, detail="Invalid token")
-        
-        user = user_repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        
-        response.set_cookie(
-            key="auth_token",
-            value=request.token,
-            httponly=True,
-            secure=True,
-            samesite="none",
-            max_age=config.JWT_EXPIRY_MINUTES * 60
-        )
-        
-        return {"message": "Session established"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=400, detail="Invalid token")
 
 
 @auth_router.post("/verify")
@@ -249,34 +222,16 @@ async def get_me(user = Depends(get_current_user)):
 
 
 @auth_router.get("/session", response_model=UserResponse)
-async def get_session(request: Request):
-    token = request.cookies.get("auth_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    try:
-        payload = jwt.decode(token, config.JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        user = user_repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return UserResponse(
-            id=user.id,
-            email=user.email,
-            display_name=user.display_name,
-            avatar_url=getattr(user, 'avatar_url', None),
-            balance=user.balance,
-            is_verified=user.is_verified,
-            created_at=user.created_at
-        )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+async def get_session(user = Depends(get_current_user)):
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=getattr(user, 'avatar_url', None),
+        balance=user.balance,
+        is_verified=user.is_verified,
+        created_at=user.created_at
+    )
 
 
 @auth_router.get("/google")
@@ -292,7 +247,7 @@ async def google_login(response: Response):
         value=state,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=600
     )
     
