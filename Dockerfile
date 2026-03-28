@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12
 
 WORKDIR /app
 
@@ -10,23 +10,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN mkdir -p /app/app/api
-
-COPY app/api/auth.py /app/app/api/auth.py
-COPY app/main.py /app/app/main.py
-COPY app/config.py /app/app/config.py
-COPY app/db/ /app/app/db/
-COPY app/services/ /app/app/services/
-COPY app/models/ /app/app/models/
-
-RUN echo "=== Checking deployed files ===" && \
-    ls -la /app/app/api/ && \
-    echo "=== First 5 lines of auth.py ===" && \
-    head -5 /app/app/api/auth.py && \
-    echo "=== Line count of auth.py ===" && \
-    wc -l /app/app/api/auth.py && \
-    echo "=== Checking for /auth/session endpoint ===" && \
-    grep -n "auth/session" /app/app/api/auth.py
+COPY app/ ./app/
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
