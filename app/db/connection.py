@@ -138,10 +138,6 @@ def init_database():
         """)
         
         cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)
-        """)
-        
-        cur.execute("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500)
         """)
         
@@ -151,6 +147,10 @@ def init_database():
         
         cur.execute("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
+        """)
+        
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)
         """)
         
         print("Mercenary database tables created")
