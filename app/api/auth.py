@@ -163,6 +163,38 @@ async def logout(response: Response):
     return {"message": "Logged out successfully"}
 
 
+class SetCookieRequest(BaseModel):
+    token: str
+
+
+@auth_router.post("/set-cookie")
+async def set_cookie(request: SetCookieRequest, response: Response):
+    try:
+        payload = jwt.decode(request.token, config.JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid token")
+        
+        user = user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        
+        response.set_cookie(
+            key="auth_token",
+            value=request.token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=config.JWT_EXPIRY_MINUTES * 60
+        )
+        
+        return {"message": "Session established"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+
 @auth_router.post("/verify")
 async def verify_email(request: VerifyRequest):
     user = user_repo.get_by_verification_token(request.token)
@@ -301,16 +333,7 @@ async def google_callback(request: Request, code: str, state: str):
     
     token = create_token(user.id)
     
-    response = RedirectResponse(url=f"{config.FRONTEND_URL}/dashboard")
-    
-    response.set_cookie(
-        key="auth_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=config.JWT_EXPIRY_MINUTES * 60
-    )
+    response = RedirectResponse(url=f"{config.FRONTEND_URL}/auth/callback?token={token}")
     
     response.delete_cookie("oauth_state")
     
