@@ -84,6 +84,44 @@ class UserRepository:
             cur.execute("SELECT balance FROM users WHERE id = %s", (user_id,))
             row = cur.fetchone()
             return float(row["balance"]) if row else 0.0
+    
+    def get_by_google_id(self, google_id: str) -> Optional[User]:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE google_id = %s", (google_id,))
+            row = cur.fetchone()
+            return User(**dict(row)) if row else None
+    
+    def link_google(self, user_id: str, google_id: str, avatar_url: str = None) -> User:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE users 
+                SET google_id = %s, avatar_url = COALESCE(%s, avatar_url), 
+                    is_verified = TRUE, updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (google_id, avatar_url, user_id)
+            )
+            row = cur.fetchone()
+            return User(**dict(row))
+    
+    def create_from_google(self, email: str, google_id: str, 
+                           display_name: str = None, avatar_url: str = None) -> User:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO users (email, google_id, display_name, avatar_url, is_verified)
+                VALUES (%s, %s, %s, %s, TRUE)
+                RETURNING *
+                """,
+                (email, google_id, display_name, avatar_url)
+            )
+            row = cur.fetchone()
+            return User(**dict(row))
 
 
 class AgentRepository:

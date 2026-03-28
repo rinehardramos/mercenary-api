@@ -41,11 +41,14 @@ def init_database():
             CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
+                password_hash VARCHAR(255),
                 display_name VARCHAR(100),
+                avatar_url VARCHAR(500),
                 balance DECIMAL(10,2) DEFAULT 0.0,
                 is_active BOOLEAN DEFAULT TRUE,
                 is_verified BOOLEAN DEFAULT FALSE,
+                is_admin BOOLEAN DEFAULT FALSE,
+                google_id VARCHAR(255) UNIQUE,
                 verification_token VARCHAR(255),
                 verification_expires TIMESTAMPTZ,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -132,6 +135,22 @@ def init_database():
         
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id)
+        """)
+        
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)
+        """)
+        
+        cur.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500)
+        """)
+        
+        cur.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE
+        """)
+        
+        cur.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
         """)
         
         print("Mercenary database tables created")

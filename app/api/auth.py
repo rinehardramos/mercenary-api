@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 import secrets
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 import jwt
 import bcrypt
@@ -15,6 +16,7 @@ import bcrypt
 from app.config import config
 from app.db import UserRepository
 from app.services.email import email_service
+from app.services.google_oauth import google_oauth_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -43,6 +45,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     display_name: Optional[str]
+    avatar_url: Optional[str] = None
     balance: float
     is_verified: bool
     created_at: datetime
@@ -190,7 +193,109 @@ async def get_me(user = Depends(get_current_user)):
         id=user.id,
         email=user.email,
         display_name=user.display_name,
+        avatar_url=getattr(user, 'avatar_url', None),
         balance=user.balance,
         is_verified=user.is_verified,
         created_at=user.created_at
     )
+
+
+@auth_router.get("/session", response_model=UserResponse)
+async def get_session(request: Request):
+    token = request.cookies.get("auth_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        payload = jwt.decode(token, config.JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        user = user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            display_name=user.display_name,
+            avatar_url=getattr(user, 'avatar_url', None),
+            balance=user.balance,
+            is_verified=user.is_verified,
+            created_at=user.created_at
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+@auth_router.get("/google")
+async def google_login(response: Response):
+    state = secrets.token_urlsafe(32)
+    
+    auth_url = google_oauth_service.get_auth_url(state)
+    
+    response = RedirectResponse(url=auth_url)
+    
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=600
+    )
+    
+    return response
+
+
+@auth_router.get("/google/callback")
+async def google_callback(request: Request, code: str, state: str):
+    oauth_state = request.cookies.get("oauth_state")
+    
+    if not oauth_state or oauth_state != state:
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+    
+    try:
+        tokens = await google_oauth_service.exchange_code(code)
+        user_info = await google_oauth_service.get_user_info(tokens["access_token"])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google OAuth failed: {str(e)}")
+    
+    user = user_repo.get_by_google_id(user_info.google_id)
+    
+    if not user:
+        user = user_repo.get_by_email(user_info.email)
+        
+        if user:
+            user = user_repo.link_google(
+                user_id=user.id,
+                google_id=user_info.google_id,
+                avatar_url=user_info.picture
+            )
+        else:
+            user = user_repo.create_from_google(
+                email=user_info.email,
+                google_id=user_info.google_id,
+                display_name=user_info.name,
+                avatar_url=user_info.picture
+            )
+    
+    token = create_token(user.id)
+    
+    response = RedirectResponse(url=f"{config.FRONTEND_URL}/dashboard")
+    
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=config.JWT_EXPIRY_MINUTES * 60
+    )
+    
+    response.delete_cookie("oauth_state")
+    
+    return response
